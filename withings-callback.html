@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<meta name="referrer" content="no-referrer">
+<title>Withings sign-in</title>
+<!--
+  Withings OAuth callback for the Adaptive Metabolic Controller (scripts/withings_auth.py).
+
+  Host this one file anywhere with HTTPS (e.g. GitHub Pages) and register its URL as the
+  Withings app's callback. It holds no secrets and makes no requests. It reads the
+  authorization code from its own URL and hands it, in your browser, to the listener that
+  withings_auth.py runs on 127.0.0.1 — the port travels inside `state` as "<nonce>.<port>".
+  It only ever forwards to 127.0.0.1, so it cannot be used to redirect anywhere else.
+  If the hand-off can't happen, it shows the code to copy (it is valid for 30 seconds).
+-->
+<style>
+  :root { --bg:#fbfbfa; --fg:#1d1d1b; --muted:#6b6b66; --line:#dcdcd6; --accent:#2f5d8a; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#161615; --fg:#ecece8; --muted:#a3a39c; --line:#3a3a36; --accent:#8fb5dc; }
+  }
+  body { background:var(--bg); color:var(--fg); font:16px/1.55 system-ui, sans-serif;
+         max-width:34rem; margin:12vh auto; padding:0 16px; }
+  h1 { font-size:1.25rem; margin:0 0 .5rem; }
+  p { color:var(--muted); margin:.4rem 0; }
+  #fallback { margin-top:1.5rem; padding-top:1rem; border-top:1px solid var(--line); }
+  code { display:block; word-break:break-all; padding:.6rem .7rem; border:1px solid var(--line);
+         border-radius:6px; font:14px ui-monospace, monospace; color:var(--fg); }
+  button { margin-top:.6rem; font:inherit; padding:.35rem .9rem; border-radius:6px;
+           border:1px solid var(--accent); background:transparent; color:var(--accent); cursor:pointer; }
+</style>
+</head>
+<body>
+<h1 id="title">Withings sign-in</h1>
+<p id="msg">Reading the authorization…</p>
+<div id="fallback" hidden>
+  <p>If your terminal didn't pick this up, copy the code and paste it there within 30 seconds:</p>
+  <code id="code"></code>
+  <button id="copy" type="button">Copy code</button>
+</div>
+<script>
+(function () {
+  var q = new URLSearchParams(location.search);
+  var code = q.get("code"), state = q.get("state") || "", err = q.get("error");
+  var msg = document.getElementById("msg");
+  if (err) { msg.textContent = "Withings returned an error: " + err; return; }
+  if (!code) { msg.textContent = "There is no authorization code in this address."; return; }
+
+  document.getElementById("code").textContent = code;
+  document.getElementById("fallback").hidden = false;
+  document.getElementById("copy").onclick = function () {
+    navigator.clipboard.writeText(code).then(function () {
+      document.getElementById("copy").textContent = "Copied";
+    });
+  };
+
+  var port = state.split(".").pop();
+  if (/^[0-9]{2,5}$/.test(port)) {
+    msg.textContent = "Handing the code to your terminal…";
+    // assign(), not replace(): if nothing is listening, Back returns here with the code.
+    setTimeout(function () {
+      location.assign("http://127.0.0.1:" + port + "/withings/callback" + location.search);
+    }, 150);
+  } else {
+    msg.textContent = "Copy the code below into your terminal.";
+  }
+})();
+</script>
+</body>
+</html>
